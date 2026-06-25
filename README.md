@@ -171,7 +171,9 @@ All errors follow the same shape:
 
 | Code | HTTP | When |
 |------|------|------|
+| `EMPTY_FILE` | 400 | Zero-byte upload |
 | `INVALID_FILE_TYPE` | 415 | File extension not in allowlist |
+| `INVALID_IMAGE_CONTENT` | 415 | Magic bytes do not match extension |
 | `FILE_TOO_LARGE` | 413 | File exceeds `MAX_UPLOAD_SIZE_MB` |
 | `NO_EXIF_DATA` | 422 | Image contains no EXIF metadata |
 | `EXIF_PROCESSING_ERROR` | 422 | Image bytes could not be parsed |
@@ -198,8 +200,10 @@ Extracted tags are automatically grouped:
 |--------|--------------|
 | JPEG / JPG | Full |
 | TIFF | Full |
-| PNG, WebP, HEIC | Limited |
+| PNG, WebP | Limited |
 | BMP, GIF | None |
+
+Magic-byte validation rejects extension spoofing (e.g. renaming a text file to `.jpg`).
 
 ---
 
@@ -214,8 +218,12 @@ Copy `.env.example` to `.env`. All settings load via environment variables.
 | `HOST` | `0.0.0.0` | Bind address |
 | `PORT` | `8000` | Server port |
 | `MAX_UPLOAD_SIZE_MB` | `25` | Max upload size |
+| `MAX_IMAGE_PIXELS` | `25000000` | Decompression-bomb protection |
 | `ALLOWED_EXTENSIONS` | `.jpg,.jpeg,.png,...` | Permitted file types |
 | `RATE_LIMIT_PER_MINUTE` | `30` | General API rate limit |
+| `RATE_LIMIT_UPLOAD_PER_MINUTE` | `10` | `/analyze` rate limit |
+| `TRUSTED_HOSTS` | `localhost,127.0.0.1` | Allowed Host headers (production) |
+| `SECRET_KEY` | (required in prod) | Must be set when `APP_ENV=production` |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `CORS_ORIGINS` | `http://localhost:8000` | Allowed CORS origins |
 

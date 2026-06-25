@@ -66,11 +66,12 @@ class TestHealthEndpoint:
     def test_health_returns_expected_fields(self, client: TestClient) -> None:
         response = client.get("/health")
         data = response.json()
-        assert "status" in data
+        assert data["status"] == "healthy"
         assert "service" in data
         assert "version" in data
         assert "environment" in data
-        assert data["status"] == "healthy"
+        assert "uptime_seconds" in data
+        assert data["uptime_seconds"] >= 0
 
     def test_health_content_type(self, client: TestClient) -> None:
         response = client.get("/health")
@@ -177,10 +178,30 @@ class TestErrorHandling:
         assert "message" in data["error"]
 
     def test_large_file_returns_413(self, client: TestClient) -> None:
-        large_data = b"x" * (26 * 1024 * 1024)  # 26MB
+        # Valid JPEG header so magic-byte check passes, then size limit triggers
+        large_data = b"\xff\xd8\xff" + b"x" * (26 * 1024 * 1024)
         files = {"file": ("huge.jpg", large_data, "image/jpeg")}
         response = client.post("/analyze", files=files)
         assert response.status_code == 413
+
+    def test_empty_file_returns_400(self, client: TestClient) -> None:
+        files = {"file": ("empty.jpg", b"", "image/jpeg")}
+        response = client.post("/analyze", files=files)
+        assert response.status_code == 400
+        assert response.json()["error"]["code"] == "EMPTY_FILE"
+
+    def test_spoofed_extension_returns_415(self, client: TestClient) -> None:
+        files = {"file": ("fake.jpg", b"not-a-real-jpeg-file", "image/jpeg")}
+        response = client.post("/analyze", files=files)
+        assert response.status_code == 415
+        assert response.json()["error"]["code"] == "INVALID_IMAGE_CONTENT"
+
+    def test_path_traversal_filename_sanitized(self, client: TestClient) -> None:
+        buf = _make_jpeg_with_exif()
+        files = {"file": ("../../etc/passwd.jpg", buf, "image/jpeg")}
+        response = client.post("/analyze", files=files)
+        assert response.status_code == 200
+        assert response.json()["filename"] == "passwd.jpg"
 
     def test_no_exif_error_format(self, client: TestClient) -> None:
         img = Image.new("RGB", (10, 10), color="white")
@@ -193,3 +214,17 @@ class TestErrorHandling:
         data = response.json()
         assert data["error"]["code"] == "NO_EXIF_DATA"
         assert "No EXIF data" in data["error"]["message"]
+
+
+class TestSecurity:
+    """Production security controls."""
+
+    def test_security_headers_on_health(self, client: TestClient) -> None:
+        response = client.get("/health")
+        assert response.headers.get("X-Content-Type-Options") == "nosniff"
+        assert response.headers.get("X-Frame-Options") == "DENY"
+        assert "Content-Security-Policy" in response.headers
+
+    def test_request_id_header(self, client: TestClient) -> None:
+        response = client.get("/health")
+        assert "X-Request-ID" in response.headers

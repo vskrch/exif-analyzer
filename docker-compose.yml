@@ -20,6 +20,11 @@ services:
       - LOG_LEVEL=INFO
       - MAX_UPLOAD_SIZE_MB=25
       - RATE_LIMIT_PER_MINUTE=30
+      - RATE_LIMIT_UPLOAD_PER_MINUTE=10
+      - SECRET_KEY=${SECRET_KEY:-docker-local-dev-only-secret-key-32chars-min}
+      - TRUSTED_HOSTS=localhost,127.0.0.1
+      - CORS_ORIGINS=http://localhost:8000
+      - WORKERS=4
     volumes:
       - upload_data:/app/uploads
       - log_data:/app/logs

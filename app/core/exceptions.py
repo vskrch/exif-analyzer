@@ -6,6 +6,7 @@ import logging
 
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,28 @@ class InvalidFileTypeError(AppException):
         )
 
 
+class InvalidImageContentError(AppException):
+    """Raised when file content does not match a known image format."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="File content does not match a supported image format.",
+            error_code="INVALID_IMAGE_CONTENT",
+        )
+
+
+class EmptyFileError(AppException):
+    """Raised when an empty file is uploaded."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is empty.",
+            error_code="EMPTY_FILE",
+        )
+
+
 class NoExifDataError(AppException):
     """Raised when an image contains no EXIF data."""
 
@@ -63,23 +86,11 @@ class NoExifDataError(AppException):
 class ExifProcessingError(AppException):
     """Raised when EXIF extraction fails."""
 
-    def __init__(self, reason: str) -> None:
+    def __init__(self, reason: str = "The image could not be processed.") -> None:
         super().__init__(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Failed to process image EXIF data: {reason}",
+            detail=reason,
             error_code="EXIF_PROCESSING_ERROR",
-        )
-
-
-class RateLimitError(AppException):
-    """Raised when rate limit is exceeded."""
-
-    def __init__(self) -> None:
-        super().__init__(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Rate limit exceeded. Please try again later.",
-            error_code="RATE_LIMIT_EXCEEDED",
-            headers={"Retry-After": "60"},
         )
 
 
@@ -97,6 +108,22 @@ def register_exception_handlers(app: FastAPI) -> None:
                 }
             },
             headers=exc.headers,
+        )
+
+    @app.exception_handler(RateLimitExceeded)
+    async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+        logger.warning(
+            "Rate limit exceeded for %s", request.client.host if request.client else "unknown"
+        )
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={
+                "error": {
+                    "code": "RATE_LIMIT_EXCEEDED",
+                    "message": "Rate limit exceeded. Please try again later.",
+                }
+            },
+            headers={"Retry-After": "60"},
         )
 
     @app.exception_handler(Exception)

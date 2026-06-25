@@ -7,9 +7,10 @@ import io
 import logging
 from typing import Any
 
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from PIL.ExifTags import TAGS
 
+from app.config import get_settings
 from app.core.exceptions import ExifProcessingError, NoExifDataError
 
 logger = logging.getLogger(__name__)
@@ -90,29 +91,35 @@ CATEGORY_MAP: dict[str, list[str]] = {
 }
 
 
+def _configure_pillow_limits() -> None:
+    """Apply decompression-bomb protection from settings."""
+    settings = get_settings()
+    Image.MAX_IMAGE_PIXELS = settings.max_image_pixels
+
+
 def extract_exif_data(image_bytes: bytes) -> dict[str, Any]:
     """
     Extract raw EXIF data from image bytes.
-
-    Args:
-        image_bytes: Raw bytes of the image file.
-
-    Returns:
-        Dictionary mapping EXIF tag names to their values.
 
     Raises:
         NoExifDataError: If the image has no EXIF data.
         ExifProcessingError: If the image cannot be processed.
     """
-    try:
-        image = Image.open(io.BytesIO(image_bytes))
-        exif_data = image._getexif()
+    _configure_pillow_limits()
 
-        if not exif_data:
+    try:
+        # Verify integrity before full decode
+        with Image.open(io.BytesIO(image_bytes)) as image:
+            image.verify()
+
+        with Image.open(io.BytesIO(image_bytes)) as image:
+            exif = image.getexif()
+
+        if not exif:
             raise NoExifDataError()
 
         result: dict[str, Any] = {}
-        for tag_id, value in exif_data.items():
+        for tag_id, value in exif.items():
             tag_name = TAGS.get(tag_id, str(tag_id))
             result[tag_name] = value
 
@@ -121,16 +128,19 @@ def extract_exif_data(image_bytes: bytes) -> dict[str, Any]:
 
     except NoExifDataError:
         raise
+    except UnidentifiedImageError as e:
+        logger.error("Unidentified image format: %s", e)
+        raise ExifProcessingError("The image could not be processed.") from e
+    except Image.DecompressionBombError as e:
+        logger.error("Image exceeds pixel limit: %s", e)
+        raise ExifProcessingError("Image dimensions exceed the allowed limit.") from e
     except Exception as e:
         logger.error("Failed to extract EXIF data: %s", e)
-        raise ExifProcessingError(str(e)) from e
+        raise ExifProcessingError("The image could not be processed.") from e
 
 
 def format_exif_value(value: Any) -> str:
-    """
-    Format an EXIF value for display.
-    Handles bytes, tuples, lists, rationals, and other types.
-    """
+    """Format an EXIF value for display."""
     if isinstance(value, bytes):
         try:
             decoded = value.decode("utf-8", errors="replace")
@@ -161,15 +171,7 @@ def format_exif_value(value: Any) -> str:
 
 
 def categorize_exif(exif_dict: dict[str, Any]) -> dict[str, list[dict[str, str]]]:
-    """
-    Group EXIF data into logical categories.
-
-    Args:
-        exif_dict: Raw EXIF tag-name -> value dictionary.
-
-    Returns:
-        Dictionary of category name -> list of {tag, value} dicts.
-    """
+    """Group EXIF data into logical categories."""
     result: dict[str, list[dict[str, str]]] = {cat: [] for cat in CATEGORY_MAP}
     result["Other"] = []
 
@@ -184,5 +186,4 @@ def categorize_exif(exif_dict: dict[str, Any]) -> dict[str, list[dict[str, str]]
         if not placed:
             result["Other"].append({"tag": tag, "value": formatted})
 
-    # Remove empty categories
     return {k: v for k, v in result.items() if v}

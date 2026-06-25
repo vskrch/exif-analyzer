@@ -15,6 +15,12 @@ os.environ.setdefault("APP_ENV", "testing")
 os.environ.setdefault("APP_DEBUG", "true")
 os.environ.setdefault("LOG_LEVEL", "DEBUG")
 os.environ.setdefault("LOG_FILE", "/tmp/test_exif.log")
+os.environ.setdefault("RATE_LIMIT_PER_MINUTE", "1000")
+os.environ.setdefault("RATE_LIMIT_UPLOAD_PER_MINUTE", "1000")
+
+from app.config import get_settings
+
+get_settings.cache_clear()
 
 from main import app  # noqa: E402
 

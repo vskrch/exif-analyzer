@@ -4,50 +4,50 @@ EXIF Analyzer - Application Entry Point
 Run with:
     python main.py                  # Development
     uvicorn main:app --host 0.0.0.0 --port 8000  # Alternative
-    gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker  # Production
 """
 
 import logging
-import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from slowapi.middleware import SlowAPIMiddleware
 
 from app import __version__
 from app.api import router
+from app.api.dependencies import limiter
 from app.config import get_settings
 from app.core.exceptions import register_exception_handlers
-from app.core.security import RequestIdMiddleware, setup_cors
+from app.core.security import (
+    RequestIdMiddleware,
+    SecurityHeadersMiddleware,
+    setup_cors,
+    setup_trusted_hosts,
+)
 from app.logging_config import setup_logging
 
 logger = logging.getLogger(__name__)
-
-# Application start time for uptime metrics
-_start_time = time.time()
 
 
 @asynccontextmanager
 async def lifespan(app_instance: FastAPI):
     """Application lifespan: startup and shutdown events."""
     settings = get_settings()
-    logger.info("%s started successfully", settings.app_name)
+    # Ensure log directory exists
+    Path(settings.log_file).parent.mkdir(parents=True, exist_ok=True)
+    logger.info("%s v%s started [%s]", settings.app_name, __version__, settings.app_env)
     yield
     logger.info("%s shutting down", settings.app_name)
 
 
 def create_app() -> FastAPI:
-    """
-    Application factory. Creates and configures the FastAPI app.
-    """
+    """Application factory. Creates and configures the FastAPI app."""
     settings = get_settings()
-
-    # Set up logging before anything else
     setup_logging()
 
     logger.info("Initializing %s v%s [%s]", settings.app_name, __version__, settings.app_env)
 
-    # Create FastAPI app with lifespan
     app = FastAPI(
         title=settings.app_name,
         description="Production-grade service for analyzing image EXIF metadata",
@@ -58,28 +58,25 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # --- Middleware (order matters: last added = first executed) ---
+    # Rate limiting
+    app.state.limiter = limiter
+    app.add_middleware(SlowAPIMiddleware)
 
-    # Request ID (outermost)
+    # Security middleware (last added = first executed)
     app.add_middleware(RequestIdMiddleware)
-
-    # CORS
+    app.add_middleware(SecurityHeadersMiddleware)
+    setup_trusted_hosts(app)
     setup_cors(app)
 
-    # --- Exception handlers ---
     register_exception_handlers(app)
 
-    # --- Static files ---
     app.mount("/static", StaticFiles(directory="static"), name="static")
-
-    # --- Routes ---
     app.include_router(router)
 
     logger.info("Application configured: %s", settings.app_name)
     return app
 
 
-# Create the ASGI application instance
 app = create_app()
 
 

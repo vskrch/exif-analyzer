@@ -28,6 +28,7 @@ class HealthResponse(BaseModel):
     service: str = Field(..., description="Service name")
     version: str = Field(..., description="Application version")
     environment: str = Field(..., description="Current environment")
+    uptime_seconds: float = Field(..., description="Seconds since process start")
 
 
 class ErrorResponse(BaseModel):
