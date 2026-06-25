@@ -1,107 +1,61 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/Version-2.0.0-764ba2?style=for-the-badge&logo=python&logoColor=white" alt="Version">
-  <img src="https://img.shields.io/badge/License-MIT-667eea?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/badge/Tests-33%20Passed-2ecc71?style=for-the-badge&logo=pytest&logoColor=white" alt="Tests">
-  <img src="https://img.shields.io/badge/Coverage-86%25-3498db?style=for-the-badge" alt="Coverage">
-  <img src="https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="CI">
-</p>
+# EXIF Analyzer
 
-<h1 align="center">
-  <br>
-  :camera: EXIF Analyzer
-  <br>
-</h1>
+Production-grade web application for analyzing image EXIF metadata. Upload an image and get categorized metadata — camera settings, GPS, timestamps, and more.
 
-<h4 align="center">Production-grade SaaS application for analyzing image EXIF metadata</h4>
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Tests](https://img.shields.io/badge/tests-33%20passed-2ecc71?logo=pytest&logoColor=white)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-86%25-3498db)](tests/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-667eea)](LICENSE)
 
-<p align="center">
-  Built with <a href="https://fastapi.tiangolo.com" target="_blank"><b>FastAPI</b></a> &bull;
-  <a href="https://docs.pydantic.dev" target="_blank"><b>Pydantic</b></a> &bull;
-  <a href="https://pillow.readthedocs.io" target="_blank"><b>Pillow</b></a> &bull;
-  <a href="https://www.docker.com" target="_blank"><b>Docker</b></a>
-</p>
+## Features
 
-<p align="center">
-  <a href="#-features">Features</a> &bull;
-  <a href="#-quick-start">Quick Start</a> &bull;
-  <a href="#-api-reference">API</a> &bull;
-  <a href="#-testing">Tests</a> &bull;
-  <a href="#-configuration">Config</a> &bull;
-  <a href="#-deployment">Deploy</a>
-</p>
+- **EXIF extraction** — Parses 50+ tags and groups them into Camera, Date/Time, GPS, Settings, and more
+- **Web UI** — Drag-and-drop upload with a responsive, collapsible results view
+- **REST API** — `POST /analyze` returns structured JSON; consistent error responses
+- **Production foundations** — Structured logging, request tracing, file validation, CORS, health checks
+- **Containerized** — Multi-stage Docker build with non-root user and health checks
+- **CI/CD** — GitHub Actions runs lint, tests, and Docker build on every push
 
----
+## Quick Start
 
-## :sparkles: Features
-
-| Feature | Description |
-|:--------|:------------|
-| :gear: **Smart EXIF Parsing** | Extracts and categorizes 50+ EXIF tags into logical groups |
-| :art: **Beautiful UI** | Modern responsive interface with drag-and-drop upload |
-| :shield: **Security First** | CORS, file validation, rate limiting, request tracing |
-| :mag: **Structured Logging** | Rotating logs with request IDs for debugging |
-| :hospital: **Health Monitoring** | `/health` endpoint with version and environment info |
-| :rocket: **Production Ready** | Docker multi-stage builds, non-root containers |
-| :test_tube: **86% Test Coverage** | 33 tests covering API endpoints and business logic |
-| :octocat: **CI/CD Pipeline** | GitHub Actions: lint, test, Docker build on every push |
-
----
-
-## :rocket: Quick Start
-
-### Option 1: Local Development
+### Local
 
 ```bash
-# Clone the repository
-git clone <repo-url> && cd exif-analyzer
+git clone https://github.com/vskrch/exif-analyzer.git
+cd exif-analyzer
 
-# Create virtual environment
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 
-# Install dependencies
 pip install -r requirements.txt
-
-# Copy environment config
 cp .env.example .env
 
-# Run the application
 python main.py
 ```
 
-> :earth_americas: Open **http://localhost:8000** in your browser
+Open [http://localhost:8000](http://localhost:8000).
 
-### Option 2: Docker
+### Docker
 
 ```bash
-# Build and run in production mode
+# Production
 docker compose up -d
 
-# Or run with hot-reload for development
+# Development (hot reload)
 docker compose --profile dev up dev
 ```
 
-### Option 3: Docker Standalone
+## API
 
-```bash
-docker build -t exif-analyzer .
-docker run -p 8000:8000 exif-analyzer
-```
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/` | Web UI |
+| `POST` | `/analyze` | Upload an image, receive categorized EXIF data |
+| `GET` | `/health` | Service health, version, environment |
+| `GET` | `/docs` | OpenAPI docs (debug mode only) |
 
----
-
-## :electric_plug: API Reference
-
-| Method | Endpoint | Description | Status Codes |
-|:------:|:---------|:------------|:-------------|
-| `GET` | `/` | Web GUI | `200` |
-| `POST` | `/analyze` | Upload and analyze image | `200`, `413`, `415`, `422` |
-| `GET` | `/health` | Health check | `200` |
-| `GET` | `/docs` | Interactive API docs | `200` |
-
-### Example Response
+**Success response** (`POST /analyze`):
 
 ```json
 {
@@ -113,18 +67,15 @@ docker run -p 8000:8000 exif-analyzer
       { "tag": "Make", "value": "Canon" },
       { "tag": "Model", "value": "EOS R5" }
     ],
-    "Date & Time": [
-      { "tag": "DateTimeOriginal", "value": "2024:01:15 10:30:00" }
-    ],
     "Camera Settings": [
-      { "tag": "FNumber", "value": "2.8000" },
+      { "tag": "FNumber", "value": "2.8" },
       { "tag": "ISOSpeedRatings", "value": "400" }
     ]
   }
 }
 ```
 
-### Error Response Format
+**Error response**:
 
 ```json
 {
@@ -135,163 +86,100 @@ docker run -p 8000:8000 exif-analyzer
 }
 ```
 
----
+| Code | HTTP | Meaning |
+|------|------|---------|
+| `INVALID_FILE_TYPE` | 415 | Extension not allowed |
+| `FILE_TOO_LARGE` | 413 | Exceeds `MAX_UPLOAD_SIZE_MB` |
+| `NO_EXIF_DATA` | 422 | Image has no EXIF metadata |
+| `EXIF_PROCESSING_ERROR` | 422 | Image could not be parsed |
 
-## :card_file_box: Project Structure
+## Project Structure
 
 ```
 exif-analyzer/
-:point_right: main.py                      # Application factory & entry point
-:point_right: app/
-:point_right: :---: __init__.py              # Version info (v2.0.0)
-:point_right: :---: config.py                # pydantic-settings configuration
-:point_right: :---: logging_config.py        # Structured logging setup
-:point_right: :---: core/
-:point_right: :------: exceptions.py        # Custom exceptions & global handlers
-:point_right: :------: security.py          # CORS, request ID, file validation
-:point_right: :---: api/
-:point_right: :------: routes.py            # Route handlers (/analyze, /health)
-:point_right: :------: dependencies.py      # Shared validation utilities
-:point_right: :---: services/
-:point_right: :------: exif_service.py      # EXIF extraction & categorization
-:point_right: :---: schemas/
-:point_right: :------: exif.py              # Pydantic response models
-:point_right: templates/
-:point_right: :---: index.html               # Jinja2 HTML template
-:point_right: static/
-:point_right: :---: css/style.css            # Modern responsive stylesheet
-:point_right: :---: js/app.js                # Client-side JavaScript
-:point_right: tests/
-:point_right: :---: conftest.py              # Pytest fixtures
-:point_right: :---: test_exif_api.py         # 17 API endpoint tests
-:point_right: :---: test_exif_service.py     # 16 service unit tests
-:point_right: Dockerfile                   # Multi-stage production image
-:point_right: docker-compose.yml           # Docker Compose (prod + dev)
-:point_right: .github/workflows/ci.yml     # GitHub Actions CI pipeline
-:point_right: pyproject.toml               # ruff, pytest, mypy config
+├── main.py                 # App factory and entry point
+├── app/
+│   ├── config.py           # Settings (pydantic-settings)
+│   ├── logging_config.py   # Structured logging
+│   ├── core/
+│   │   ├── exceptions.py   # Custom errors and handlers
+│   │   └── security.py     # CORS, request ID, upload validation
+│   ├── api/
+│   │   └── routes.py       # Route handlers
+│   ├── services/
+│   │   └── exif_service.py # EXIF extraction and categorization
+│   └── schemas/
+│       └── exif.py         # Pydantic response models
+├── templates/index.html
+├── static/css/style.css
+├── static/js/app.js
+├── tests/
+├── Dockerfile
+├── docker-compose.yml
+└── pyproject.toml
 ```
 
----
-
-## :test_tube: Testing
+## Development
 
 ```bash
-# Install dev dependencies
 pip install -r requirements-dev.txt
 
-# Run all tests (33 tests)
+# Tests
 pytest
-
-# Run with coverage report
 pytest --cov=app --cov-report=term-missing
 
-# Run specific test file
-pytest tests/test_exif_api.py -v
-```
-
-### Test Coverage
-
-| Module | Coverage |
-|:-------|:--------:|
-| `app/api/routes.py` | :green_circle: 100% |
-| `app/core/security.py` | :green_circle: 97% |
-| `app/logging_config.py` | :green_circle: 98% |
-| `app/config.py` | :green_circle: 95% |
-| `app/core/exceptions.py` | :green_circle: 91% |
-| `app/services/exif_service.py` | :green_circle: 88% |
-| **Overall** | :green_circle: **86%** |
-
----
-
-## :art: Linting & Formatting
-
-```bash
-# Check code for issues
+# Lint and format
 ruff check .
-
-# Auto-fix safe issues
-ruff check --fix .
-
-# Format all files
 ruff format .
 ```
 
----
+## Configuration
 
-## :wrench: Configuration
-
-All settings are managed via environment variables (or `.env` file).
+Copy `.env.example` to `.env`. Key variables:
 
 | Variable | Default | Description |
-|:---------|:--------|:------------|
-| `APP_ENV` | `development` | `development`, `production`, `testing` |
-| `APP_DEBUG` | `false` | Enable API docs and hot reload |
+|----------|---------|-------------|
+| `APP_ENV` | `development` | `development`, `production`, or `testing` |
+| `APP_DEBUG` | `false` | Enables `/docs` and hot reload |
 | `PORT` | `8000` | Server port |
-| `MAX_UPLOAD_SIZE_MB` | `25` | Maximum file upload size |
-| `ALLOWED_EXTENSIONS` | `.jpg,.jpeg,.png,...` | Allowed image file types |
-| `RATE_LIMIT_PER_MINUTE` | `30` | API rate limit |
+| `MAX_UPLOAD_SIZE_MB` | `25` | Max upload size |
+| `ALLOWED_EXTENSIONS` | `.jpg,.jpeg,.png,...` | Permitted file types |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
-| `CORS_ORIGINS` | `http://localhost:3000,...` | Allowed CORS origins |
+| `CORS_ORIGINS` | `http://localhost:8000` | Allowed origins |
 
----
+## Supported Formats
 
-## :camera: Supported Image Formats
+| Format | EXIF support |
+|--------|--------------|
+| JPEG / JPG | Full |
+| TIFF | Full |
+| PNG, WebP, HEIC | Limited |
+| BMP, GIF | None |
 
-| Format | EXIF Support | Notes |
-|:-------|:------------:|:------|
-| JPEG / JPG | :large_blue_circle: Full | Best EXIF support |
-| TIFF | :large_blue_circle: Full | Full metadata |
-| PNG | :large_orange_circle: Limited | Basic EXIF only |
-| WebP | :large_orange_circle: Limited | Depends on encoder |
-| HEIC / HEIF | :large_orange_circle: Limited | Requires Pillow 10.1+ |
-| BMP | :red_circle: None | No EXIF data |
-| GIF | :red_circle: None | No EXIF data |
+## Deployment
 
----
-
-## :package: Deployment
-
-### Production (Docker Compose)
+**Docker Compose** (recommended):
 
 ```bash
 docker compose up -d
 ```
 
-Features:
-- Non-root container for security
-- Health checks configured
-- Volume mounts for uploads and logs
-- Auto-restart on failure
-
-### Production (Gunicorn)
+**Gunicorn**:
 
 ```bash
 gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
 ```
 
-### Environment Variables for Production
+Set these in production:
 
 ```bash
 APP_ENV=production
 APP_DEBUG=false
 LOG_LEVEL=WARNING
-SECRET_KEY=<your-secret-key>
+SECRET_KEY=<random-secret>
 CORS_ORIGINS=https://yourdomain.com
 ```
 
----
+## License
 
-## :memo: License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-<p align="center">
-  Made with :heart: by <a href="https://github.com/yourusername">Slop coded using cursor</a>
-  <br><br>
-  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
-  <img src="https://img.shields.io/badge/FASTAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Ruff-0.11-D7FF64?style=for-the-badge&logo=rust&logoColor=black" alt="Ruff">
-  <img src="https://img.shields.io/badge/Docker-24.0-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
-</p>
+MIT
