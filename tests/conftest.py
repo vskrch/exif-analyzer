@@ -4,7 +4,7 @@ Pytest fixtures for the EXIF Analyzer test suite.
 
 import io
 import os
-from typing import Generator
+from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
@@ -28,37 +28,10 @@ def client() -> Generator:
 
 @pytest.fixture
 def sample_jpeg_bytes() -> bytes:
-    """Generate a minimal JPEG image with EXIF data for testing."""
+    """Generate a minimal JPEG image for testing."""
     img = Image.new("RGB", (100, 100), color="red")
-
-    # Add EXIF data
-    from PIL.ExifTags import Base as ExifBase
-
-    exif_dict = {
-        ExifBase.Make: "TestCamera",
-        ExifBase.Model: "TestModel 5000",
-        ExifBase.Software: "TestSoftware 1.0",
-        ExifBase.DateTime: "2024:01:15 10:30:00",
-        ExifBase.DateTimeOriginal: "2024:01:15 10:30:00",
-        ExifBase.ExposureTime: (1, 250),
-        ExifBase.FNumber: (28, 10),
-        ExifBase.ISOSpeedRatings: 400,
-        ExifBase.FocalLength: (50, 1),
-        ExifBase.ImageWidth: 100,
-        ExifBase.ImageLength: 100,
-    }
-
-    import struct
-
-    # Build EXIF bytes manually for PIL
-    img_bytes = io.BytesIO()
-    img.save(img_bytes, format="JPEG", exif=struct.pack("<HH", 0x4578, 0x6966))
-    img_bytes.seek(0)
-
-    # Simpler approach: save with basic EXIF
-    img2 = Image.new("RGB", (100, 100), color="blue")
     output = io.BytesIO()
-    img2.save(output, format="JPEG")
+    img.save(output, format="JPEG")
     output.seek(0)
     return output.read()
 

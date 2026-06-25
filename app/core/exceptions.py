@@ -3,7 +3,6 @@ Custom exception classes and global exception handlers.
 """
 
 import logging
-from typing import Any, Optional
 
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
@@ -19,7 +18,7 @@ class AppException(Exception):
         status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail: str = "An unexpected error occurred",
         error_code: str = "INTERNAL_ERROR",
-        headers: Optional[dict] = None,
+        headers: dict | None = None,
     ) -> None:
         self.status_code = status_code
         self.detail = detail

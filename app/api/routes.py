@@ -4,10 +4,10 @@ FastAPI route definitions.
 
 import logging
 import time
-from typing import Dict, Any
+from typing import Any
 
-from fastapi import APIRouter, Request, UploadFile, File
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import APIRouter, File, Request, UploadFile
+from fastapi.responses import HTMLResponse
 
 from app import __version__
 from app.config import get_settings
@@ -29,11 +29,13 @@ async def home(request: Request) -> HTMLResponse:
     from fastapi.templating import Jinja2Templates
 
     templates = Jinja2Templates(directory="templates")
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 
 @router.post("/analyze", response_model=ExifAnalysisResponse, tags=["analysis"])
-async def analyze_image(file: UploadFile = File(..., description="Image file to analyze")) -> Dict[str, Any]:
+async def analyze_image(
+    file: UploadFile = File(..., description="Image file to analyze"),
+) -> dict[str, Any]:
     """
     Upload an image and receive its categorized EXIF metadata.
 
@@ -69,7 +71,7 @@ async def analyze_image(file: UploadFile = File(..., description="Image file to 
 
 
 @router.get("/health", response_model=HealthResponse, tags=["ops"])
-async def health_check() -> Dict[str, str]:
+async def health_check() -> dict[str, str]:
     """
     Health check endpoint for load balancers and monitoring.
     Returns service status, version, and environment.

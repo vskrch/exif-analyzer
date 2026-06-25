@@ -47,7 +47,9 @@ def setup_request_id(app: FastAPI) -> None:
     app.add_middleware(RequestIdMiddleware)
 
 
-async def validate_upload_file(file: UploadFile, max_size_mb: int, allowed_extensions: set) -> bytes:
+async def validate_upload_file(
+    file: UploadFile, max_size_mb: int, allowed_extensions: set
+) -> bytes:
     """
     Validate and read an uploaded file.
     Checks file extension and size before returning contents.

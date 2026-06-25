@@ -9,6 +9,7 @@ Run with:
 
 import logging
 import time
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -26,6 +27,15 @@ logger = logging.getLogger(__name__)
 _start_time = time.time()
 
 
+@asynccontextmanager
+async def lifespan(app_instance: FastAPI):
+    """Application lifespan: startup and shutdown events."""
+    settings = get_settings()
+    logger.info("%s started successfully", settings.app_name)
+    yield
+    logger.info("%s shutting down", settings.app_name)
+
+
 def create_app() -> FastAPI:
     """
     Application factory. Creates and configures the FastAPI app.
@@ -37,7 +47,7 @@ def create_app() -> FastAPI:
 
     logger.info("Initializing %s v%s [%s]", settings.app_name, __version__, settings.app_env)
 
-    # Create FastAPI app
+    # Create FastAPI app with lifespan
     app = FastAPI(
         title=settings.app_name,
         description="Production-grade service for analyzing image EXIF metadata",
@@ -45,6 +55,7 @@ def create_app() -> FastAPI:
         docs_url="/docs" if settings.app_debug else None,
         redoc_url="/redoc" if settings.app_debug else None,
         openapi_url="/openapi.json" if settings.app_debug else None,
+        lifespan=lifespan,
     )
 
     # --- Middleware (order matters: last added = first executed) ---
@@ -63,15 +74,6 @@ def create_app() -> FastAPI:
 
     # --- Routes ---
     app.include_router(router)
-
-    # --- Startup / Shutdown ---
-    @app.on_event("startup")
-    async def on_startup() -> None:
-        logger.info("%s started successfully", settings.app_name)
-
-    @app.on_event("shutdown")
-    async def on_shutdown() -> None:
-        logger.info("%s shutting down", settings.app_name)
 
     logger.info("Application configured: %s", settings.app_name)
     return app

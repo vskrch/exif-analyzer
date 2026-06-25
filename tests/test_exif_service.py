@@ -7,7 +7,7 @@ import io
 import pytest
 from PIL import Image
 
-from app.core.exceptions import NoExifDataError
+from app.core.exceptions import ExifProcessingError, NoExifDataError
 from app.services.exif_service import (
     categorize_exif,
     extract_exif_data,
@@ -18,15 +18,40 @@ from app.services.exif_service import (
 class TestExtractExifData:
     """Tests for extract_exif_data function."""
 
-    def test_extract_from_jpeg(self) -> None:
+    def test_extract_from_jpeg_with_exif(self) -> None:
+        import struct
+
+        img = Image.new("RGB", (100, 100), color="red")
+        buf = io.BytesIO()
+
+        # Build minimal EXIF with Make tag
+        exif_header = b"Exif\x00\x00"
+        tiff_header = b"II" + struct.pack("<HI", 42, 8)
+        num_entries = struct.pack("<H", 1)
+        make_val = b"TestCamera\x00"
+        make_offset = 8 + 2 + 1 * 12 + 4
+        entry_make = struct.pack("<HHII", 0x010F, 2, 11, make_offset)
+        next_ifd = struct.pack("<I", 0)
+        tiff_data = tiff_header + num_entries + entry_make + next_ifd + make_val
+        full_exif = exif_header + tiff_data
+
+        img.save(buf, format="JPEG", exif=full_exif)
+        buf.seek(0)
+        data = buf.read()
+
+        result = extract_exif_data(data)
+        assert isinstance(result, dict)
+        assert "Make" in result
+
+    def test_extract_from_jpeg_without_exif_raises(self) -> None:
         img = Image.new("RGB", (100, 100), color="red")
         buf = io.BytesIO()
         img.save(buf, format="JPEG")
         buf.seek(0)
         data = buf.read()
 
-        result = extract_exif_data(data)
-        assert isinstance(result, dict)
+        with pytest.raises(NoExifDataError):
+            extract_exif_data(data)
 
     def test_extract_from_image_without_exif_raises(self) -> None:
         img = Image.new("RGB", (100, 100), color="green")
@@ -39,7 +64,7 @@ class TestExtractExifData:
             extract_exif_data(data)
 
     def test_extract_invalid_bytes_raises(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises((NoExifDataError, ExifProcessingError)):
             extract_exif_data(b"not an image at all")
 
 

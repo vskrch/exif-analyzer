@@ -3,18 +3,16 @@ Shared FastAPI dependencies (rate limiter, etc.).
 """
 
 import logging
-from typing import Optional
 
 from fastapi import Request, UploadFile
 
 from app.config import get_settings
 from app.core.exceptions import FileTooLargeError, InvalidFileTypeError
-from app.logging_config import request_id_filter
 
 logger = logging.getLogger(__name__)
 
 
-def get_request_id(request: Request) -> Optional[str]:
+def get_request_id(request: Request) -> str | None:
     """Extract request ID from request headers."""
     return request.headers.get("X-Request-ID")
 
@@ -24,7 +22,6 @@ async def validate_upload(file: UploadFile) -> bytes:
     Validate an uploaded file against configured limits.
     Returns file contents if valid, raises exceptions otherwise.
     """
-    import os
     from pathlib import Path
 
     settings = get_settings()

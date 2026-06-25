@@ -5,7 +5,6 @@ All settings are loaded from environment variables or .env file.
 
 from functools import lru_cache
 from pathlib import Path
-from typing import List
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -58,7 +57,7 @@ class Settings(BaseSettings):
         return {ext.strip().lower() for ext in self.allowed_extensions.split(",")}
 
     @property
-    def cors_origin_list(self) -> List[str]:
+    def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     @property
