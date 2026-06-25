@@ -1,0 +1,55 @@
+# ============================================
+# EXIF Analyzer - Docker Compose
+# ============================================
+# Usage:
+#   docker compose up              # Start in foreground
+#   docker compose up -d           # Start in background
+#   docker compose down            # Stop
+#   docker compose logs -f         # Follow logs
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - LOG_LEVEL=INFO
+      - MAX_UPLOAD_SIZE_MB=25
+      - RATE_LIMIT_PER_MINUTE=30
+    volumes:
+      - upload_data:/app/uploads
+      - log_data:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # Optional: Development mode with hot reload
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=development
+      - APP_DEBUG=true
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - .:/app
+      - /app/__pycache__
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    profiles:
+      - dev
+
+volumes:
+  upload_data:
+  log_data:
