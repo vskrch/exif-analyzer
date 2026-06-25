@@ -288,7 +288,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 ---
 
 <p align="center">
-  Made with :heart: by <a href="https://github.com/yourusername">Your Name</a>
+  Made with :heart: by <a href="https://github.com/yourusername">Slop coded using cursor</a>
   <br><br>
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/FASTAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI">

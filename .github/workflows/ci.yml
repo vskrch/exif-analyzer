@@ -18,8 +18,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install ruff
-        run: pip install ruff
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install dev dependencies
+        run: pip install ruff==0.11.13
       - name: Check formatting
         run: ruff format --check .
       - name: Check linting
@@ -33,15 +35,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
       - name: Run tests with coverage
         run: pytest --cov=app --cov-report=xml --cov-report=term-missing -v
       - name: Upload coverage to Codecov
         if: github.event_name == 'push'
+        continue-on-error: true
         uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
+          fail_ci_if_error: false
 
   docker:
     name: Build Docker Image
@@ -56,6 +62,15 @@ jobs:
       - name: Verify health check
         run: |
           docker run -d --name test-container -p 8000:8000 exif-analyzer:${{ github.sha }}
-          sleep 5
-          curl -f http://localhost:8000/health || exit 1
+          for i in $(seq 1 10); do
+            if curl -sf http://localhost:8000/health; then
+              echo "Health check passed"
+              docker stop test-container
+              exit 0
+            fi
+            echo "Waiting for container... ($i/10)"
+            sleep 3
+          done
+          docker logs test-container
           docker stop test-container
+          exit 1
